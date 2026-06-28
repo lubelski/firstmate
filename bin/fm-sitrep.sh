@@ -334,20 +334,19 @@ n_inflight=0; for r in "${inflight[@]:-}"; do [ -n "$r" ] && n_inflight=$((n_inf
 n_approach=0; for r in "${approach[@]:-}"; do [ -n "$r" ] && n_approach=$((n_approach + 1)); done
 landed=$(landed_count)
 
-printf 'SITREP · %s\n' "$(date '+%Y-%m-%d %H:%M')"
-
-if [ "$n_flagged" -eq 0 ] && [ "$n_inflight" -eq 0 ] && [ "$n_approach" -eq 0 ]; then
-  printf '\nAll quiet - nothing in flight.\n'
-  printf '\nLANDED - %s change%s shipped in the last hour\n' "$landed" "$([ "$landed" = 1 ] && printf '' || printf 's')"
-  exit 0
-fi
+# Render mirrors the crowsnest on-screen motif in markdown: a bold section
+# title followed by a dim count, an indented body, and a dim "(none)" for an
+# empty section. Every section is always printed in order - never elided - and
+# the markup is lightweight so it reads cleanly both as rendered markdown (in
+# chat) and as raw text (when the captain runs `! bin/fm-sitrep.sh`).
+printf '**SITREP** · %s\n' "$(date '+%Y-%m-%d %H:%M')"
 
 # Reset the handle counter for the printed [n], walking the same order as the index.
 hn=0
 
-printf '\nFLAGGED (%s)\n' "$n_flagged"
+printf '\n**FLAGGED · %s**\n' "$n_flagged"
 if [ "$n_flagged" -eq 0 ]; then
-  printf '  none\n'
+  printf '_(none)_\n'
 else
   for row in "${flagged[@]:-}"; do
     [ -n "$row" ] || continue
@@ -355,13 +354,13 @@ else
 $row
 EOF
     hn=$((hn + 1))
-    printf '  [%s] %s — %s\n' "$hn" "$name" "$outcome"
+    printf -- '- **[%s]** %s — %s\n' "$hn" "$name" "$outcome"
   done
 fi
 
-printf '\nIN FLIGHT (%s)\n' "$n_inflight"
+printf '\n**IN FLIGHT · %s**\n' "$n_inflight"
 if [ "$n_inflight" -eq 0 ]; then
-  printf '  none\n'
+  printf '_(none)_\n'
 else
   for row in "${inflight[@]:-}"; do
     [ -n "$row" ] || continue
@@ -369,13 +368,13 @@ else
 $row
 EOF
     hn=$((hn + 1))
-    printf '  [%s] %s — %s\n' "$hn" "$name" "$doing"
+    printf -- '- **[%s]** %s — %s\n' "$hn" "$name" "$doing"
   done
 fi
 
-printf '\nON APPROACH (%s)\n' "$n_approach"
+printf '\n**ON APPROACH · %s**\n' "$n_approach"
 if [ "$n_approach" -eq 0 ]; then
-  printf '  none\n'
+  printf '_(none)_\n'
 else
   for row in "${approach[@]:-}"; do
     [ -n "$row" ] || continue
@@ -392,9 +391,13 @@ EOF
         wait_note=" · waiting on ${breason:-$bid}"
       fi
     fi
-    printf '  [%s] %s — %s%s\n' "$hn" "$repo" "${oneliner:-queued}" "$wait_note"
+    printf -- '- **[%s]** %s — %s%s\n' "$hn" "$repo" "${oneliner:-queued}" "$wait_note"
   done
 fi
 
-printf '\nLANDED - %s change%s shipped in the last hour\n' "$landed" "$([ "$landed" = 1 ] && printf '' || printf 's')"
-printf '\nDrill in: bin/fm-sitrep.sh <n>\n'
+# LANDED stays a single summary line; its count is its own none-marker, so it
+# carries no "(none)" of its own.
+printf '\n**LANDED**\n'
+printf '%s change%s shipped in the last hour\n' "$landed" "$([ "$landed" = 1 ] && printf '' || printf 's')"
+
+printf '\n_Drill in: `/sitrep <n>` (or `! bin/fm-sitrep.sh <n>`)_\n'
