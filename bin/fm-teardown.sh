@@ -584,5 +584,17 @@ rm -f "$STATE/$ID.status" "$STATE/$ID.turn-ended" "$STATE/$ID.check.sh" "$STATE/
 if [ "$KIND" != scout ] && [ "$KIND" != secondmate ] && [ "$MODE" != local-only ]; then
   "$FM_ROOT/bin/fm-fleet-sync.sh" "$PROJ" || true
 fi
+# Record the landing so fm-sitrep.sh can report "N changes shipped in the last hour"
+# cheaply and with no network. One append at the confirmed-success point; the note
+# is the PR url when known, else a mode/kind-appropriate marker.
+LANDED_NOTE=$PR_URL
+if [ -z "$LANDED_NOTE" ]; then
+  case "$KIND" in
+    scout)      LANDED_NOTE="data/$ID/report.md" ;;
+    secondmate) LANDED_NOTE="retired" ;;
+    *)          if [ "$MODE" = local-only ]; then LANDED_NOTE="local main"; else LANDED_NOTE="landed"; fi ;;
+  esac
+fi
+printf '%s\t%s\t%s\n' "$(date +%s)" "$ID" "$LANDED_NOTE" >> "$STATE/.landed-log" 2>/dev/null || true
 echo "teardown $ID complete (window $T, worktree $WT)"
 backlog_refresh_reminder
